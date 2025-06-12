@@ -1,0 +1,141 @@
+.card {
+  background-color: #1f2937;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card:hover {
+  border-color: #374151;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.card.highlighted {
+  border-color: #d97706;
+  background-color: #374151;
+}
+
+.content {
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.projectName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  background-color: #374151;
+  border: none;
+  color: #9ca3af;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+}
+
+.actionButton:hover {
+  background-color: #4b5563;
+  color: white;
+  transform: scale(1.05);
+}
+
+.deleteButton {
+  background-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.deleteButton:hover {
+  background-color: #991b1b;
+  color: #fecaca;
+}
+
+/* Responsive Design */
+@media (min-width: 640px) {
+  .card {
+    padding: 2rem;
+    min-height: 160px;
+  }
+
+  .title {
+    font-size: 0.875rem;
+  }
+
+  .subtitle {
+    font-size: 0.875rem;
+  }
+
+  .projectName {
+    font-size: 1.125rem;
+  }
+
+  .actions {
+    gap: 0.75rem;
+  }
+
+  .actionButton {
+    padding: 0.625rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 1rem;
+    min-height: 120px;
+  }
+
+  .actions {
+    gap: 0.25rem;
+  }
+
+  .actionButton {
+    padding: 0.375rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+  }
+}
