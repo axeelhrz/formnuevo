@@ -181,7 +181,7 @@ export function ScatDataProvider({ children }) {
   const lastSavedStateRef = useRef(null);
   const autoSaveTimeoutRef = useRef(null);
 
-  // Función para auto-guardar datos SCAT en proyecto existente
+  // Función para auto-guardar datos SCAT en proyecto existente (SOLO ACTUALIZAR, NO CREAR)
   const autoSaveToProject = useCallback(() => {
     if (!state.currentProjectId) {
       console.log('No hay proyecto actual para auto-guardar');
@@ -189,7 +189,7 @@ export function ScatDataProvider({ children }) {
     }
 
     try {
-      console.log('=== AUTO-GUARDANDO DATOS SCAT EN PROYECTO ===');
+      console.log('=== AUTO-GUARDANDO DATOS SCAT EN PROYECTO EXISTENTE ===');
       console.log('Project ID:', state.currentProjectId);
 
       // Obtener proyectos del localStorage
@@ -242,7 +242,7 @@ export function ScatDataProvider({ children }) {
 
       // Solo actualizar si hay datos SCAT reales
       if (hasRealScatData) {
-        // Actualizar proyecto con nuevos datos SCAT
+        // SOLO ACTUALIZAR proyecto existente, NO CREAR NUEVO
         const updatedProject = {
           ...projects[projectIndex],
           scatData: scatData,
@@ -255,7 +255,7 @@ export function ScatDataProvider({ children }) {
         // Guardar en localStorage
         localStorage.setItem('scatProjects', JSON.stringify(projects));
         
-        console.log('=== DATOS SCAT AUTO-GUARDADOS EN PROYECTO ===');
+        console.log('=== DATOS SCAT AUTO-GUARDADOS EN PROYECTO EXISTENTE ===');
         console.log('Datos guardados:', scatData);
       } else {
         console.log('No hay datos SCAT reales para auto-guardar');
@@ -289,7 +289,7 @@ export function ScatDataProvider({ children }) {
     }
   }, [state.isEditing]);
 
-  // Auto-guardado mejorado con debounce
+  // Auto-guardado mejorado con debounce (SOLO ACTUALIZAR PROYECTOS EXISTENTES)
   useEffect(() => {
     if (isInitializedRef.current) {
       const currentStateString = JSON.stringify(state);
@@ -305,11 +305,11 @@ export function ScatDataProvider({ children }) {
         // Configurar nuevo timeout para auto-guardado
         autoSaveTimeoutRef.current = setTimeout(() => {
           if (state.currentProjectId) {
-            // Si hay un proyecto actual, auto-guardar datos SCAT en él
+            // Si hay un proyecto actual, SOLO actualizar datos SCAT en él
             autoSaveToProject();
           } else {
-            // Solo para proyectos nuevos sin ID
-            console.log('Auto-guardando datos temporales');
+            // Solo para datos temporales (NO CREAR PROYECTOS AUTOMÁTICAMENTE)
+            console.log('Auto-guardando datos temporales (sin crear proyecto)');
             localStorage.setItem('scatData', currentStateString);
           }
         }, 1000); // Debounce de 1 segundo
@@ -485,7 +485,7 @@ export function ScatDataProvider({ children }) {
     );
   }, [state]);
 
-  // Función para forzar guardado inmediato
+  // Función para forzar guardado inmediato (SOLO ACTUALIZAR PROYECTO EXISTENTE)
   const forceSave = useCallback(() => {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);

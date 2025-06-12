@@ -17,6 +17,7 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 
 	const [errors, setErrors] = useState({});
 	const hasInitialized = useRef(false);
+	const isCreatingProject = useRef(false); // Prevenir creación múltiple
 
 	// Limpiar formulario cuando se abre el modal (solo una vez)
 	useEffect(() => {
@@ -24,9 +25,11 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			console.log('=== MODAL ABIERTO - INICIALIZANDO FORMULARIO LIMPIO ===');
 			resetForm();
 			hasInitialized.current = true;
+			isCreatingProject.current = false; // Reset flag
 		} else if (!isOpen) {
 			// Resetear la bandera cuando se cierra el modal
 			hasInitialized.current = false;
+			isCreatingProject.current = false;
 		}
 	}, [isOpen]);
 
@@ -73,8 +76,16 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const createProjectWithScatData = (dataToSave) => {
-		console.log('=== CREANDO PROYECTO CON DATOS SCAT ===');
+	const createSingleProject = (dataToSave) => {
+		// Prevenir creación múltiple
+		if (isCreatingProject.current) {
+			console.log('Ya se está creando un proyecto, saltando...');
+			return null;
+		}
+
+		isCreatingProject.current = true;
+
+		console.log('=== CREANDO PROYECTO ÚNICO ===');
 		console.log('Datos del formulario:', dataToSave);
 
 		// Obtener datos SCAT actuales del contexto
@@ -142,20 +153,30 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			isSimulated: false
 		};
 
-		console.log('Proyecto creado con datos SCAT:', newProject);
+		console.log('Proyecto creado:', newProject);
 
-		// Guardar proyecto inmediatamente en localStorage
+		// Guardar proyecto inmediatamente en localStorage (UNA SOLA VEZ)
 		try {
 			const existingProjects = localStorage.getItem('scatProjects');
 			const projects = existingProjects ? JSON.parse(existingProjects) : [];
+			
+			// Verificar que no existe ya un proyecto con el mismo ID
+			const existingProject = projects.find(p => p.id === newProject.id);
+			if (existingProject) {
+				console.log('Proyecto ya existe, no se creará duplicado');
+				return existingProject;
+			}
+			
 			const updatedProjects = [newProject, ...projects];
 			localStorage.setItem('scatProjects', JSON.stringify(updatedProjects));
-			console.log('Proyecto guardado en localStorage');
+			console.log('Proyecto guardado en localStorage (sin duplicados)');
 		} catch (error) {
 			console.error('Error guardando proyecto en localStorage:', error);
+			isCreatingProject.current = false;
+			return null;
 		}
 
-		// Establecer proyecto actual en el contexto
+		// Establecer proyecto actual en el contexto DESPUÉS de guardarlo
 		setCurrentProject(newProject.id);
 
 		// Llamar al callback para actualizar la UI del dashboard
@@ -173,15 +194,19 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			console.log('=== GUARDAR SOLO ===');
 			console.log('Datos del formulario:', formData);
 			
-			// Crear el proyecto con todos los datos SCAT actuales
-			createProjectWithScatData(formData);
+			// Crear el proyecto UNA SOLA VEZ
+			const createdProject = createSingleProject(formData);
 			
-			// Limpiar formulario y cerrar modal
-			resetForm();
-			onClose();
-			
-			// Mostrar mensaje de confirmación
-			alert('Proyecto creado exitosamente y guardado en el dashboard.');
+			if (createdProject) {
+				// Limpiar formulario y cerrar modal
+				resetForm();
+				onClose();
+				
+				// Mostrar mensaje de confirmación
+				alert('Proyecto creado exitosamente y guardado en el dashboard.');
+			} else {
+				alert('Error al crear el proyecto. Por favor, intente nuevamente.');
+			}
 		}
 	};
 
@@ -195,25 +220,29 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			// Hacer una copia de los datos antes de proceder
 			const dataToSave = { ...formData };
 			
-			// Crear el proyecto con los datos actuales (incluyendo SCAT si existen)
-			const newProject = createProjectWithScatData(dataToSave);
+			// Crear el proyecto UNA SOLA VEZ
+			const newProject = createSingleProject(dataToSave);
 			
-			console.log('Proyecto creado:', newProject);
-			
-			// Establecer datos del proyecto en el contexto para continuar
-			setProjectData(dataToSave);
-			
-			// Usar setTimeout para asegurar que el estado se actualice antes de navegar
-			setTimeout(() => {
-				// Limpiar formulario
-				resetForm();
+			if (newProject) {
+				console.log('Proyecto creado para continuar:', newProject);
 				
-				// Navegar al SCAT con los datos originales
-				if (onContinue) {
-					console.log('Navegando al SCAT con datos:', dataToSave);
-					onContinue(dataToSave);
-				}
-			}, 100); // Pequeño delay para asegurar que el estado se actualice
+				// Establecer datos del proyecto en el contexto para continuar
+				setProjectData(dataToSave);
+				
+				// Usar setTimeout para asegurar que el estado se actualice antes de navegar
+				setTimeout(() => {
+					// Limpiar formulario
+					resetForm();
+					
+					// Navegar al SCAT con los datos originales
+					if (onContinue) {
+						console.log('Navegando al SCAT con datos:', dataToSave);
+						onContinue(dataToSave);
+					}
+				}, 100); // Pequeño delay para asegurar que el estado se actualice
+			} else {
+				alert('Error al crear el proyecto. Por favor, intente nuevamente.');
+			}
 		}
 	};
 
@@ -227,6 +256,7 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			otrosDatos: "",
 		});
 		setErrors({});
+		isCreatingProject.current = false; // Reset flag
 	};
 
 	const handleCancel = () => {
@@ -365,15 +395,17 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 							type="button"
 							onClick={handleSaveOnly}
 							className={styles.saveButton}
+							disabled={isCreatingProject.current}
 						>
-							Guardar Proyecto
+							{isCreatingProject.current ? 'Guardando...' : 'Guardar Proyecto'}
 						</button>
 						<button 
 							type="button"
 							onClick={handleSaveAndContinue}
 							className={styles.submitButton}
+							disabled={isCreatingProject.current}
 						>
-							Guardar y Continuar
+							{isCreatingProject.current ? 'Guardando...' : 'Guardar y Continuar'}
 						</button>
 					</div>
 				</form>

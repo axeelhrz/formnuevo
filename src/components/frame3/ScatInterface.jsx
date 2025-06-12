@@ -73,49 +73,17 @@ function ScatInterface({
 		forceSave
 	} = useScatData();
 
-	// Función para guardar datos SCAT en proyecto existente
+	// Función para guardar datos SCAT SOLO en proyecto existente (CORREGIDA - NO CREAR NUEVOS)
 	const saveScatDataToProject = useCallback(async () => {
 		console.log('=== GUARDANDO DATOS SCAT EN PROYECTO ===');
 		
-		// Si no hay proyecto actual, intentar crear uno con los datos básicos
-		if (!currentProjectId && projectData && Object.values(projectData).some(v => v && v.toString().trim())) {
-			console.log('No hay proyecto actual, creando uno nuevo...');
-			
-			try {
-				// Crear proyecto con datos básicos
-				const newProject = {
-					id: Date.now(),
-					name: projectData.evento || 'Proyecto SCAT',
-					description: projectData.otrosDatos || `Involucrado: ${projectData.involucrado} - Área: ${projectData.area}`,
-					createdAt: new Date().toISOString(),
-					formData: { ...projectData },
-					scatData: {
-						evaluacion: evaluacionData,
-						contacto: contactoData,
-						causasInmediatas: causasInmediatasData,
-						causasBasicas: causasBasicasData,
-						necesidadesControl: necesidadesControlData
-					},
-					status: 'active',
-					lastModified: new Date().toISOString(),
-					version: 1,
-					isReal: true,
-					isExample: false,
-					isSimulated: false
-				};
-
-				// Guardar en localStorage
-				const existingProjects = localStorage.getItem('scatProjects');
-				const projects = existingProjects ? JSON.parse(existingProjects) : [];
-				const updatedProjects = [newProject, ...projects];
-				localStorage.setItem('scatProjects', JSON.stringify(updatedProjects));
-				
-				console.log('Nuevo proyecto creado y guardado:', newProject);
-				return true;
-			} catch (error) {
-				console.error('Error creando nuevo proyecto:', error);
-				return false;
-			}
+		// CRÍTICO: Solo guardar si hay proyecto actual, NUNCA crear nuevos automáticamente
+		if (!currentProjectId) {
+			console.log('No hay proyecto actual para auto-guardar. No se creará proyecto automáticamente.');
+			// Guardar temporalmente en localStorage para no perder datos
+			const currentState = getCompleteSummary();
+			localStorage.setItem('scatData', JSON.stringify(currentState));
+			return true;
 		}
 
 		// Si hay proyecto actual, usar el guardado forzado
@@ -130,12 +98,8 @@ function ScatInterface({
 			}
 		}
 
-		// Si no hay datos del proyecto, guardar como temporal
-		console.log('Guardando datos temporalmente');
-		const currentState = getCompleteSummary();
-		localStorage.setItem('scatData', JSON.stringify(currentState));
-		return true;
-	}, [currentProjectId, projectData, evaluacionData, contactoData, causasInmediatasData, causasBasicasData, necesidadesControlData, forceSave, getCompleteSummary]);
+		return false;
+	}, [currentProjectId, forceSave, getCompleteSummary]);
 
 	// Debug: Mostrar datos cargados
 	useEffect(() => {
