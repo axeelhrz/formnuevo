@@ -549,3 +549,27 @@
   color: #dc3545;
   font-weight: 500;
 }
+
+.autoSavedIndicator {
+  color: #4CAF50;
+  font-size: 0.8em;
+  font-weight: normal;
+  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.autoSaveInfo {
+  background-color: #e8f5e8;
+  border: 1px solid #4CAF50;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.autoSaveInfo small {
+  color: #2e7d32;
+  font-size: 0.85em;
+}

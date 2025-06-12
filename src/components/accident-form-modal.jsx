@@ -17,21 +17,222 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 
 	const [errors, setErrors] = useState({});
 	const hasInitialized = useRef(false);
-	const isCreatingProject = useRef(false); // Prevenir creación múltiple
+	const currentProjectRef = useRef(null);
+	const autoSaveTimeoutRef = useRef(null);
 
-	// Limpiar formulario cuando se abre el modal (solo una vez)
+	// CREAR PROYECTO INMEDIATAMENTE AL ABRIR EL MODAL
 	useEffect(() => {
 		if (isOpen && !hasInitialized.current) {
-			console.log('=== MODAL ABIERTO - INICIALIZANDO FORMULARIO LIMPIO ===');
+			console.log('=== MODAL ABIERTO - CREANDO PROYECTO INMEDIATAMENTE ===');
+			
+			// Limpiar formulario
 			resetForm();
+			
+			// CREAR PROYECTO VACÍO INMEDIATAMENTE
+			const newProject = createEmptyProject();
+			if (newProject) {
+				currentProjectRef.current = newProject;
+				console.log('=== PROYECTO CREADO INMEDIATAMENTE ===', newProject.id);
+			}
+			
 			hasInitialized.current = true;
-			isCreatingProject.current = false; // Reset flag
 		} else if (!isOpen) {
-			// Resetear la bandera cuando se cierra el modal
 			hasInitialized.current = false;
-			isCreatingProject.current = false;
+			currentProjectRef.current = null;
 		}
 	}, [isOpen]);
+
+	// AUTO-GUARDADO INMEDIATO CUANDO CAMBIAN LOS DATOS
+	useEffect(() => {
+		if (isOpen && currentProjectRef.current && hasInitialized.current) {
+			// Limpiar timeout anterior
+			if (autoSaveTimeoutRef.current) {
+				clearTimeout(autoSaveTimeoutRef.current);
+			}
+
+			// Guardar después de 500ms de inactividad
+			autoSaveTimeoutRef.current = setTimeout(() => {
+				updateProjectWithCurrentData();
+			}, 500);
+		}
+
+		return () => {
+			if (autoSaveTimeoutRef.current) {
+				clearTimeout(autoSaveTimeoutRef.current);
+			}
+		};
+	}, [formData, isOpen]);
+
+	// FUNCIÓN PARA CREAR PROYECTO VACÍO INMEDIATAMENTE
+	const createEmptyProject = () => {
+		try {
+			console.log('=== CREANDO PROYECTO VACÍO INMEDIATAMENTE ===');
+
+			// Obtener datos SCAT actuales (probablemente vacíos)
+			const currentSummary = getCompleteSummary();
+
+			// Crear proyecto con datos mínimos
+			const newProject = {
+				id: Date.now(),
+				name: "Nuevo Proyecto",
+				description: "Proyecto creado automáticamente",
+				createdAt: new Date().toISOString(),
+				
+				// Datos del formulario (inicialmente vacíos)
+				formData: {
+					evento: "",
+					involucrado: "",
+					area: "",
+					fechaHora: "",
+					investigador: "",
+					otrosDatos: ""
+				},
+				
+				// Datos SCAT (inicialmente vacíos pero con estructura completa)
+				scatData: {
+					evaluacion: currentSummary.evaluacion || {
+						severity: null,
+						probability: null,
+						frequency: null
+					},
+					contacto: currentSummary.contacto || {
+						selectedIncidents: [],
+						image: null,
+						observation: ''
+					},
+					causasInmediatas: currentSummary.causasInmediatas || {
+						actos: {
+							selectedItems: [],
+							image: null,
+							observation: ''
+						},
+						condiciones: {
+							selectedItems: [],
+							image: null,
+							observation: ''
+						}
+					},
+					causasBasicas: currentSummary.causasBasicas || {
+						personales: {
+							selectedItems: [],
+							detailedSelections: {},
+							image: null,
+							observation: ''
+						},
+						laborales: {
+							selectedItems: [],
+							detailedSelections: {},
+							image: null,
+							observation: ''
+						}
+					},
+					necesidadesControl: currentSummary.necesidadesControl || {
+						selectedItems: [],
+						detailedData: {},
+						globalImage: null,
+						globalObservation: '',
+						medidasCorrectivas: ''
+					}
+				},
+				
+				// Metadatos
+				status: 'active',
+				lastModified: new Date().toISOString(),
+				version: 1,
+				isReal: true,
+				isExample: false,
+				isSimulated: false,
+				isAutoCreated: true // Marcar como creado automáticamente
+			};
+
+			// Guardar inmediatamente en localStorage
+			const existingProjects = localStorage.getItem('scatProjects');
+			const projects = existingProjects ? JSON.parse(existingProjects) : [];
+			const updatedProjects = [newProject, ...projects];
+			localStorage.setItem('scatProjects', JSON.stringify(updatedProjects));
+
+			// Establecer como proyecto actual
+			setCurrentProject(newProject.id);
+
+			// Notificar al dashboard
+			if (onCreateProject) {
+				onCreateProject(newProject);
+			}
+
+			console.log('=== PROYECTO VACÍO CREADO Y GUARDADO ===', newProject);
+			return newProject;
+
+		} catch (error) {
+			console.error('Error creando proyecto vacío:', error);
+			return null;
+		}
+	};
+
+	// FUNCIÓN PARA ACTUALIZAR PROYECTO CON DATOS ACTUALES
+	const updateProjectWithCurrentData = () => {
+		if (!currentProjectRef.current) {
+			console.log('No hay proyecto actual para actualizar');
+			return;
+		}
+
+		try {
+			console.log('=== ACTUALIZANDO PROYECTO CON DATOS ACTUALES ===');
+			
+			const projectId = currentProjectRef.current.id;
+			const savedProjects = localStorage.getItem('scatProjects');
+			
+			if (!savedProjects) {
+				console.log('No hay proyectos guardados');
+				return;
+			}
+
+			const projects = JSON.parse(savedProjects);
+			const projectIndex = projects.findIndex(p => p.id === projectId);
+			
+			if (projectIndex === -1) {
+				console.log('Proyecto no encontrado para actualizar');
+				return;
+			}
+
+			// Actualizar con datos actuales del formulario
+			const updatedProject = {
+				...projects[projectIndex],
+				// Actualizar nombre si hay evento
+				name: formData.evento.trim() || "Nuevo Proyecto",
+				description: formData.otrosDatos.trim() || 
+					(formData.involucrado.trim() ? `Involucrado: ${formData.involucrado} - Área: ${formData.area}` : "Proyecto en progreso"),
+				
+				// Actualizar datos del formulario
+				formData: {
+					evento: formData.evento,
+					involucrado: formData.involucrado,
+					area: formData.area,
+					fechaHora: formData.fechaHora,
+					investigador: formData.investigador,
+					otrosDatos: formData.otrosDatos
+				},
+				
+				// Mantener datos SCAT existentes
+				scatData: projects[projectIndex].scatData,
+				
+				// Actualizar metadatos
+				lastModified: new Date().toISOString(),
+				version: (projects[projectIndex].version || 1) + 1,
+				isAutoCreated: true
+			};
+
+			projects[projectIndex] = updatedProject;
+			localStorage.setItem('scatProjects', JSON.stringify(projects));
+			
+			// Actualizar referencia local
+			currentProjectRef.current = updatedProject;
+
+			console.log('=== PROYECTO ACTUALIZADO AUTOMÁTICAMENTE ===', updatedProject);
+
+		} catch (error) {
+			console.error('Error actualizando proyecto:', error);
+		}
+	};
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -40,7 +241,6 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			[name]: value,
 		}));
 
-		// Limpiar error cuando el usuario empiece a escribir
 		if (errors[name]) {
 			setErrors((prev) => ({
 				...prev,
@@ -76,174 +276,56 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const createSingleProject = (dataToSave) => {
-		// Prevenir creación múltiple
-		if (isCreatingProject.current) {
-			console.log('Ya se está creando un proyecto, saltando...');
-			return null;
-		}
-
-		isCreatingProject.current = true;
-
-		console.log('=== CREANDO PROYECTO ÚNICO ===');
-		console.log('Datos del formulario:', dataToSave);
-
-		// Obtener datos SCAT actuales del contexto
-		const currentSummary = getCompleteSummary();
-		console.log('Resumen completo actual:', currentSummary);
-
-		// Verificar si hay datos SCAT reales
-		const hasScatData = (
-			// Evaluación
-			Object.values(currentSummary.evaluacion || {}).some(v => v !== null && v !== undefined) ||
-			// Contacto
-			(currentSummary.contacto?.selectedIncidents?.length > 0) ||
-			(currentSummary.contacto?.observation?.trim()) ||
-			(currentSummary.contacto?.image) ||
-			// Causas Inmediatas
-			(currentSummary.causasInmediatas?.actos?.selectedItems?.length > 0) ||
-			(currentSummary.causasInmediatas?.condiciones?.selectedItems?.length > 0) ||
-			(currentSummary.causasInmediatas?.actos?.observation?.trim()) ||
-			(currentSummary.causasInmediatas?.condiciones?.observation?.trim()) ||
-			(currentSummary.causasInmediatas?.actos?.image) ||
-			(currentSummary.causasInmediatas?.condiciones?.image) ||
-			// Causas Básicas
-			(currentSummary.causasBasicas?.personales?.selectedItems?.length > 0) ||
-			(currentSummary.causasBasicas?.laborales?.selectedItems?.length > 0) ||
-			(currentSummary.causasBasicas?.personales?.observation?.trim()) ||
-			(currentSummary.causasBasicas?.laborales?.observation?.trim()) ||
-			(currentSummary.causasBasicas?.personales?.image) ||
-			(currentSummary.causasBasicas?.laborales?.image) ||
-			// Necesidades de Control
-			(currentSummary.necesidadesControl?.selectedItems?.length > 0) ||
-			(currentSummary.necesidadesControl?.globalObservation?.trim()) ||
-			(currentSummary.necesidadesControl?.globalImage) ||
-			(currentSummary.necesidadesControl?.medidasCorrectivas?.trim())
-		);
-
-		// Preparar datos SCAT para guardar
-		let scatDataToSave = null;
-		if (hasScatData) {
-			scatDataToSave = {
-				evaluacion: currentSummary.evaluacion,
-				contacto: currentSummary.contacto,
-				causasInmediatas: currentSummary.causasInmediatas,
-				causasBasicas: currentSummary.causasBasicas,
-				necesidadesControl: currentSummary.necesidadesControl
-			};
-			console.log('Datos SCAT a guardar:', scatDataToSave);
-		} else {
-			console.log('No hay datos SCAT para guardar');
-		}
-
-		// Crear un nuevo proyecto con ID único y todos los datos necesarios
-		const newProject = {
-			id: Date.now(), // Usar timestamp como ID único
-			name: dataToSave.evento,
-			description: dataToSave.otrosDatos || `Involucrado: ${dataToSave.involucrado} - Área: ${dataToSave.area}`,
-			createdAt: new Date().toISOString(),
-			formData: { ...dataToSave }, // Guardar todos los datos del formulario
-			scatData: scatDataToSave, // Incluir datos SCAT si existen
-			// Metadatos adicionales
-			status: 'active',
-			lastModified: new Date().toISOString(),
-			version: 1,
-			isReal: true,
-			isExample: false,
-			isSimulated: false
-		};
-
-		console.log('Proyecto creado:', newProject);
-
-		// Guardar proyecto inmediatamente en localStorage (UNA SOLA VEZ)
-		try {
-			const existingProjects = localStorage.getItem('scatProjects');
-			const projects = existingProjects ? JSON.parse(existingProjects) : [];
-			
-			// Verificar que no existe ya un proyecto con el mismo ID
-			const existingProject = projects.find(p => p.id === newProject.id);
-			if (existingProject) {
-				console.log('Proyecto ya existe, no se creará duplicado');
-				return existingProject;
-			}
-			
-			const updatedProjects = [newProject, ...projects];
-			localStorage.setItem('scatProjects', JSON.stringify(updatedProjects));
-			console.log('Proyecto guardado en localStorage (sin duplicados)');
-		} catch (error) {
-			console.error('Error guardando proyecto en localStorage:', error);
-			isCreatingProject.current = false;
-			return null;
-		}
-
-		// Establecer proyecto actual en el contexto DESPUÉS de guardarlo
-		setCurrentProject(newProject.id);
-
-		// Llamar al callback para actualizar la UI del dashboard
-		if (onCreateProject) {
-			onCreateProject(newProject);
-		}
-
-		return newProject;
-	};
-
 	const handleSaveOnly = (e) => {
 		e.preventDefault();
 
-		if (validateForm()) {
-			console.log('=== GUARDAR SOLO ===');
-			console.log('Datos del formulario:', formData);
-			
-			// Crear el proyecto UNA SOLA VEZ
-			const createdProject = createSingleProject(formData);
-			
-			if (createdProject) {
-				// Limpiar formulario y cerrar modal
-				resetForm();
-				onClose();
-				
-				// Mostrar mensaje de confirmación
-				alert('Proyecto creado exitosamente y guardado en el dashboard.');
-			} else {
-				alert('Error al crear el proyecto. Por favor, intente nuevamente.');
-			}
+		if (!currentProjectRef.current) {
+			alert('Error: No se pudo crear el proyecto');
+			return;
 		}
+
+		// Actualizar una vez más con los datos finales
+		updateProjectWithCurrentData();
+
+		// Mostrar mensaje de confirmación
+		const projectName = formData.evento.trim() || "Nuevo Proyecto";
+		alert(`Proyecto "${projectName}" guardado exitosamente en el dashboard.`);
+		
+		resetForm();
+		onClose();
 	};
 
 	const handleSaveAndContinue = (e) => {
 		e.preventDefault();
 
-		if (validateForm()) {
-			console.log('=== GUARDAR Y CONTINUAR ===');
-			console.log('Datos del formulario antes de crear:', formData);
-			
-			// Hacer una copia de los datos antes de proceder
-			const dataToSave = { ...formData };
-			
-			// Crear el proyecto UNA SOLA VEZ
-			const newProject = createSingleProject(dataToSave);
-			
-			if (newProject) {
-				console.log('Proyecto creado para continuar:', newProject);
-				
-				// Establecer datos del proyecto en el contexto para continuar
-				setProjectData(dataToSave);
-				
-				// Usar setTimeout para asegurar que el estado se actualice antes de navegar
-				setTimeout(() => {
-					// Limpiar formulario
-					resetForm();
-					
-					// Navegar al SCAT con los datos originales
-					if (onContinue) {
-						console.log('Navegando al SCAT con datos:', dataToSave);
-						onContinue(dataToSave);
-					}
-				}, 100); // Pequeño delay para asegurar que el estado se actualice
-			} else {
-				alert('Error al crear el proyecto. Por favor, intente nuevamente.');
-			}
+		if (!validateForm()) {
+			return;
 		}
+
+		if (!currentProjectRef.current) {
+			alert('Error: No se pudo crear el proyecto');
+			return;
+		}
+
+		console.log('=== GUARDAR Y CONTINUAR ===');
+		
+		// Actualizar proyecto con datos finales
+		updateProjectWithCurrentData();
+		
+		// Establecer datos del proyecto en el contexto
+		setProjectData(formData);
+		
+		setTimeout(() => {
+			resetForm();
+			
+			if (onContinue) {
+				console.log('Navegando al SCAT con proyecto ID:', currentProjectRef.current.id);
+				onContinue({
+					...formData,
+					projectId: currentProjectRef.current.id
+				});
+			}
+		}, 100);
 	};
 
 	const resetForm = () => {
@@ -256,13 +338,27 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 			otrosDatos: "",
 		});
 		setErrors({});
-		isCreatingProject.current = false; // Reset flag
 	};
 
 	const handleCancel = () => {
+		// El proyecto ya está guardado, solo cerrar
+		if (currentProjectRef.current) {
+			const projectName = currentProjectRef.current.name;
+			console.log(`Proyecto "${projectName}" ya está guardado en el dashboard`);
+		}
+		
 		resetForm();
 		onClose();
 	};
+
+	// Limpiar timeout al cerrar
+	useEffect(() => {
+		return () => {
+			if (autoSaveTimeoutRef.current) {
+				clearTimeout(autoSaveTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	if (!isOpen) return null;
 
@@ -270,7 +366,14 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 		<div className={styles.modalOverlay}>
 			<div className={styles.modalContent}>
 				<div className={styles.modalHeader}>
-					<h2 className={styles.modalTitle}>Nuevo Reporte de Accidente/Incidente</h2>
+					<h2 className={styles.modalTitle}>
+						Nuevo Reporte de Accidente/Incidente
+						{currentProjectRef.current && (
+							<span className={styles.autoSavedIndicator}>
+								✓ Guardado automáticamente
+							</span>
+						)}
+					</h2>
 					<button className={styles.closeButton} onClick={handleCancel}>
 						×
 					</button>
@@ -389,26 +492,31 @@ export default function AccidentFormModal({ isOpen, onClose, onCreateProject, on
 							onClick={handleCancel}
 							className={styles.cancelButton}
 						>
-							Cancelar
+							Cerrar
 						</button>
 						<button 
 							type="button"
 							onClick={handleSaveOnly}
 							className={styles.saveButton}
-							disabled={isCreatingProject.current}
 						>
-							{isCreatingProject.current ? 'Guardando...' : 'Guardar Proyecto'}
+							Finalizar y Guardar
 						</button>
 						<button 
 							type="button"
 							onClick={handleSaveAndContinue}
 							className={styles.submitButton}
-							disabled={isCreatingProject.current}
 						>
-							{isCreatingProject.current ? 'Guardando...' : 'Guardar y Continuar'}
+							Continuar con SCAT
 						</button>
 					</div>
 				</form>
+
+				<div className={styles.autoSaveInfo}>
+					<small>
+						ℹ️ Este proyecto se guarda automáticamente mientras escribes. 
+						Puedes cerrar esta ventana en cualquier momento y tus datos se mantendrán.
+					</small>
+				</div>
 			</div>
 		</div>
 	);
