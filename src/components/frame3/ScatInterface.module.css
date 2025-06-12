@@ -718,3 +718,20 @@
 .contentArea.scrolled::before {
   opacity: 1;
 }
+
+.editingBadge {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+}
+
+.editingProgress {
+  color: #ff6b35;
+  font-weight: 500;
+}

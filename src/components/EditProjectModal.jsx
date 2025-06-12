@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, Edit, Eye } from "lucide-react";
 import styles from "./AccidentForm.module.css";
 import pdfService from "../services/pdfService";
 import { generatePDFDataFromProject } from "../utils/pdfDataNormalizer";
+import { useScatData } from "../contexts/ScatContext";
 
-export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
+export default function EditProjectModal({ isOpen, onClose, project, onSave, onNavigateToScat }) {
+	const { loadProjectData, setEditingMode, resetAllData } = useScatData();
 	const [formData, setFormData] = useState({
 		evento: "",
 		involucrado: "",
@@ -32,8 +34,22 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
 				investigador: project.formData.investigador || "",
 				otrosDatos: project.formData.otrosDatos || "",
 			});
+
+			// Cargar datos SCAT en el contexto para que estén disponibles
+			if (project.scatData) {
+				console.log('=== CARGANDO DATOS SCAT EN CONTEXTO ===');
+				loadProjectData(project);
+				setEditingMode(true, project.id);
+			}
 		}
-	}, [isOpen, project]);
+	}, [isOpen, project, loadProjectData, setEditingMode]);
+
+	// Limpiar contexto al cerrar modal
+	useEffect(() => {
+		if (!isOpen) {
+			resetAllData();
+		}
+	}, [isOpen, resetAllData]);
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -104,6 +120,59 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
 
 		// Llamar a la función onSave del padre
 		onSave(updatedProject);
+		
+		// Cerrar modal
+		onClose();
+	};
+
+	const handleEditScatData = () => {
+		console.log('=== EDITANDO DATOS SCAT ===');
+		
+		if (!project) {
+			alert('No hay proyecto para editar');
+			return;
+		}
+
+		// Navegar al SCAT interface en modo edición
+		if (onNavigateToScat) {
+			const editData = {
+				...project.formData,
+				isEditing: true,
+				projectId: project.id,
+				projectData: project
+			};
+			
+			console.log('Navegando al SCAT para editar datos:', editData);
+			onNavigateToScat(editData);
+			onClose(); // Cerrar el modal
+		} else {
+			alert('Función de navegación no disponible');
+		}
+	};
+
+	const handleViewScatData = () => {
+		console.log('=== VISUALIZANDO DATOS SCAT ===');
+		
+		if (!project) {
+			alert('No hay proyecto para visualizar');
+			return;
+		}
+
+		// Navegar al SCAT interface en modo visualización
+		if (onNavigateToScat) {
+			const viewData = {
+				...project.formData,
+				isViewing: true,
+				projectId: project.id,
+				projectData: project
+			};
+			
+			console.log('Navegando al SCAT para visualizar datos:', viewData);
+			onNavigateToScat(viewData);
+			onClose(); // Cerrar el modal
+		} else {
+			alert('Función de navegación no disponible');
+		}
 	};
 
 	const handleCancel = () => {
@@ -191,6 +260,15 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
 			default:
 				return false;
 		}
+	};
+
+	// Verificar si hay algún dato SCAT
+	const hasAnyScatData = () => {
+		return hasScatData('evaluacion') || 
+			   hasScatData('contacto') || 
+			   hasScatData('causasInmediatas') || 
+			   hasScatData('causasBasicas') || 
+			   hasScatData('necesidadesControl');
 	};
 
 	if (!isOpen) return null;
@@ -299,7 +377,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
 
 							{/* Información de datos SCAT */}
 							<div className={styles.scatDataInfo}>
-								<h4>Datos SCAT Disponibles:</h4>
+								<h4>Datos SCAT:</h4>
 								<div className={styles.scatDataStatus}>
 									<span className={hasScatData('evaluacion') ? styles.available : styles.notAvailable}>
 										Evaluación: {hasScatData('evaluacion') ? '✓' : '✗'}
@@ -316,6 +394,42 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
 									<span className={hasScatData('necesidadesControl') ? styles.available : styles.notAvailable}>
 										Necesidades de Control: {hasScatData('necesidadesControl') ? '✓' : '✗'}
 									</span>
+								</div>
+
+								{/* Botones para editar/ver datos SCAT */}
+								<div className={styles.scatActions}>
+									{hasAnyScatData() ? (
+										<>
+											<button
+												type="button"
+												onClick={handleViewScatData}
+												className={styles.viewScatButton}
+												title="Ver datos SCAT (solo lectura)"
+											>
+												<Eye size={16} />
+												Ver Datos SCAT
+											</button>
+											<button
+												type="button"
+												onClick={handleEditScatData}
+												className={styles.editScatButton}
+												title="Editar datos SCAT completos"
+											>
+												<Edit size={16} />
+												Editar Datos SCAT
+											</button>
+										</>
+									) : (
+										<button
+											type="button"
+											onClick={handleEditScatData}
+											className={styles.createScatButton}
+											title="Crear/completar datos SCAT"
+										>
+											<Edit size={16} />
+											Completar Análisis SCAT
+										</button>
+									)}
 								</div>
 							</div>
 						</div>
@@ -335,7 +449,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }) {
 							Cancelar
 						</button>
 						<button type="submit" className={styles.saveButton}>
-							Guardar Cambios
+							Guardar Información
 						</button>
 					</div>
 				</form>

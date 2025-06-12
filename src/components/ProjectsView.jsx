@@ -190,8 +190,28 @@ function ProjectsView({ onNavigateToBase, onNavigateToScat }) {
 	};
 
 	const handleEditProject = (project) => {
-		// Abrir modal de edición
-		console.log('=== EDITANDO PROYECTO ===');
+		// Navegar al SCAT con los datos del proyecto en modo edición
+		console.log('=== EDITANDO PROYECTO COMPLETO ===');
+		console.log('Proyecto a editar:', project);
+		
+		if (onNavigateToScat && project.formData) {
+			const editData = {
+				...project.formData,
+				isEditing: true, // Modo edición
+				projectId: project.id,
+				projectData: project
+			};
+			
+			console.log('Navegando al SCAT en modo edición con datos:', editData);
+			onNavigateToScat(editData);
+		} else {
+			alert('No se encontraron datos del proyecto para editar.');
+		}
+	};
+
+	const handleEditProjectInfo = (project) => {
+		// Abrir modal de edición solo para información básica
+		console.log('=== EDITANDO INFORMACIÓN DEL PROYECTO ===');
 		console.log('Proyecto a editar:', project);
 		
 		setEditingProject(project);
@@ -373,9 +393,16 @@ function ProjectsView({ onNavigateToBase, onNavigateToScat }) {
 									<button 
 										className={`${styles.projectActionButton} ${styles.editButton}`}
 										onClick={() => handleEditProject(project)}
-										title="Editar información del proyecto"
+										title="Editar proyecto completo (SCAT)"
 									>
 										<Edit size={14} />
+									</button>
+									<button 
+										className={styles.projectActionButton}
+										onClick={() => handleEditProjectInfo(project)}
+										title="Editar solo información básica"
+									>
+										<Info size={14} />
 									</button>
 									<button 
 										className={styles.projectActionButton}
@@ -461,6 +488,7 @@ function ProjectsView({ onNavigateToBase, onNavigateToScat }) {
 				}}
 				project={editingProject}
 				onSave={handleSaveProject}
+				onNavigateToScat={onNavigateToScat}
 			/>
 		</div>
 	);

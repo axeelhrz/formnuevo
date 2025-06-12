@@ -11,7 +11,7 @@ import styles from "./Baseframe.module.css";
 import { useScatData } from "../contexts/ScatContext";
 
 function BaseFrame({ onNavigateToScat, onNavigateToProjects }) {
-	const { resetAllData } = useScatData();
+	const { resetAllData, setCurrentProject } = useScatData();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
 	const [projects, setProjects] = useState([]);
@@ -187,6 +187,9 @@ function BaseFrame({ onNavigateToScat, onNavigateToProjects }) {
 	}, [projects, loadMoreProjects, isInitialized]);
 
 	const handleCreateProject = (newProject) => {
+		console.log('=== CREANDO PROYECTO EN BASE FRAME ===');
+		console.log('Nuevo proyecto:', newProject);
+		
 		// Asegurar que el nuevo proyecto no tenga marcas de simulado
 		const realProject = {
 			...newProject,
@@ -199,11 +202,20 @@ function BaseFrame({ onNavigateToScat, onNavigateToProjects }) {
 			const updatedProjects = [realProject, ...prev];
 			return updatedProjects;
 		});
+
+		// Establecer el proyecto actual en el contexto para auto-guardado
+		if (realProject.id) {
+			console.log('Estableciendo proyecto actual para auto-guardado:', realProject.id);
+			setCurrentProject(realProject.id);
+		}
 	};
 
 	const handleEditProject = (project) => {
 		// Cargar todos los datos del proyecto en el contexto y navegar al SCAT en modo edición
 		if (project.formData && typeof onNavigateToScat === 'function') {
+			console.log('=== EDITANDO PROYECTO DESDE BASE FRAME ===');
+			console.log('Proyecto a editar:', project);
+			
 			// Marcar que estamos en modo edición
 			const editData = {
 				...project.formData,
@@ -217,7 +229,6 @@ function BaseFrame({ onNavigateToScat, onNavigateToProjects }) {
 			alert('No se encontraron datos del proyecto para editar.');
 		}
 	};
-
 
 	const handleDeleteProject = (projectId) => {
 		const projectToDelete = projects.find(p => p.id === projectId);

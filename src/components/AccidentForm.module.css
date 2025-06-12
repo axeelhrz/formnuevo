@@ -478,3 +478,74 @@
 .modalContent {
   animation: modalFadeIn 0.2s ease-out;
 }
+
+
+.scatActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.viewScatButton,
+.editScatButton,
+.createScatButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.viewScatButton {
+  background: linear-gradient(135deg, #6c757d, #495057);
+  color: white;
+}
+
+.viewScatButton:hover {
+  background: linear-gradient(135deg, #5a6268, #3d4043);
+  transform: translateY(-1px);
+}
+
+.editScatButton {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+}
+
+.editScatButton:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-1px);
+}
+
+.createScatButton {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+}
+
+.createScatButton:hover {
+  background: linear-gradient(135deg, #1e7e34, #155724);
+  transform: translateY(-1px);
+}
+
+.scatDataStatus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.available {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.notAvailable {
+  color: #dc3545;
+  font-weight: 500;
+}
